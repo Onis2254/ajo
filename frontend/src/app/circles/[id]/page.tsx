@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import { CheckCircle2, Circle as CircleIcon, AlertTriangle } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { Button, Card, Badge, Spinner, CopyButton } from "@/components/ui";
+import { Button, Card, Badge, CopyButton } from "@/components/ui";
+import { CircleDetailSkeleton } from "./circle-detail-skeleton";
 import { useWallet } from "@/context/wallet-context";
 import {
   Circle,
@@ -200,7 +201,7 @@ export default function CircleDetailPage() {
               {error}
             </Card>
           ) : !circle || !members ? (
-            <Spinner label="Loading circle…" />
+            <CircleDetailSkeleton />
           ) : (
             <CircleDetail
               circle={circle}
