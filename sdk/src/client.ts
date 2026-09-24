@@ -3,7 +3,9 @@ import {
   Account,
   Address,
   Contract,
+  FeeBumpTransaction,
   Keypair,
+  Transaction,
   TransactionBuilder,
   BASE_FEE,
   nativeToScVal,
@@ -87,6 +89,34 @@ const DEFAULT_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 export function decodeReturnValue<T = unknown>(returnValue: xdr.ScVal | undefined): T | undefined {
   if (returnValue === undefined || returnValue.switch() === xdr.ScValType.scvVoid()) return undefined;
   return scValToNative(returnValue) as T;
+}
+
+const SEND_TX_MAX_ATTEMPTS = 5;
+const SEND_TX_RETRY_BASE_DELAY_MS = 500;
+
+/**
+ * Calls `server.sendTransaction`, retrying with exponential backoff on
+ * `TRY_AGAIN_LATER` — the node's mempool was busy and the transaction was
+ * never actually broadcast, so falling straight into the `getTransaction`
+ * poll loop would never find it and would only time out after the full
+ * ~60s window (#150). `DUPLICATE` and `PENDING` are returned as-is: a
+ * duplicate submission is treated as success by the caller, which proceeds
+ * to poll for the (already-submitted) transaction as normal.
+ */
+export async function sendWithRetry(
+  server: rpc.Server,
+  tx: Transaction | FeeBumpTransaction,
+): Promise<rpc.Api.SendTransactionResponse> {
+  let sent = await server.sendTransaction(tx);
+  for (
+    let attempt = 0;
+    sent.status === "TRY_AGAIN_LATER" && attempt < SEND_TX_MAX_ATTEMPTS;
+    attempt++
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, SEND_TX_RETRY_BASE_DELAY_MS * 2 ** attempt));
+    sent = await server.sendTransaction(tx);
+  }
+  return sent;
 }
 
 /**
@@ -251,7 +281,7 @@ export class AjoClient {
    */
   async submitSignedTx<T = unknown>(signedXdr: string): Promise<T | undefined> {
     const tx = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase);
-    const sent = await this.server.sendTransaction(tx);
+    const sent = await sendWithRetry(this.server, tx);
     if (sent.status === "ERROR") {
       throw new AjoContractError(`Transaction rejected: ${JSON.stringify(sent.errorResult)}`);
     }
