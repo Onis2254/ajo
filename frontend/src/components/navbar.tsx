@@ -21,7 +21,7 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { address, connecting, connectWallet, disconnectWallet } = useWallet();
+  const { address, connecting, restoring, connectWallet, disconnectWallet } = useWallet();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [lastPathname, setLastPathname] = useState(pathname);
@@ -142,6 +142,8 @@ export function Navbar() {
                 </motion.div>
               )}
             </div>
+          ) : restoring ? (
+            <WalletPlaceholder className="h-9 w-36" />
           ) : (
             <Button onClick={handleConnect} disabled={connecting} size="sm">
               <Wallet size={14} />
@@ -192,6 +194,8 @@ export function Navbar() {
                   Disconnect
                 </button>
               </>
+            ) : restoring ? (
+              <WalletPlaceholder className="mt-1 h-10 w-full" />
             ) : (
               <Button onClick={handleConnect} disabled={connecting} className="mt-1">
                 <Wallet size={14} />
@@ -202,5 +206,19 @@ export function Navbar() {
         </motion.div>
       )}
     </header>
+  );
+}
+
+/**
+ * Neutral stand-in for the wallet control while the silent reconnect is in
+ * flight, so neither "Connect wallet" nor an address is shown prematurely.
+ */
+function WalletPlaceholder({ className = "" }: { className?: string }) {
+  return (
+    <span
+      role="status"
+      aria-label="Checking wallet connection"
+      className={`block animate-pulse rounded-full bg-border ${className}`}
+    />
   );
 }
