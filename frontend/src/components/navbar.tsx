@@ -26,6 +26,8 @@ export function Navbar() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [lastPathname, setLastPathname] = useState(pathname);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   if (pathname !== lastPathname) {
     setLastPathname(pathname);
@@ -43,6 +45,26 @@ export function Navbar() {
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [accountMenuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const container = mobileMenuRef.current;
+    if (!container) return;
+
+    const firstLink = container.querySelector<HTMLElement>('a[href], button:not([disabled])');
+    firstLink?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        mobileMenuButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
 
   async function handleConnect() {
     try {
@@ -122,6 +144,7 @@ export function Navbar() {
         </div>
 
         <button
+          ref={mobileMenuButtonRef}
           className="flex h-9 w-9 items-center justify-center text-foreground md:hidden"
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
@@ -133,6 +156,7 @@ export function Navbar() {
 
       {menuOpen && (
         <motion.div
+          ref={mobileMenuRef}
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="card mx-auto mt-2 max-w-4xl px-4 py-4 md:hidden"
