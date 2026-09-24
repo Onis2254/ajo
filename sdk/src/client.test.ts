@@ -1,6 +1,7 @@
 // Client test tests.
 import { describe, expect, it } from "vitest";
-import { AjoClient, AjoContractError, CircleStatus, minLedgerFromRangeError } from "./client";
+import { nativeToScVal, xdr } from "@stellar/stellar-sdk";
+import { AjoClient, AjoContractError, CircleStatus, decodeReturnValue, minLedgerFromRangeError } from "./client";
 
 describe("AjoContractError", () => {
   it("is a real Error subclass with a stable name for narrowing", () => {
@@ -52,5 +53,18 @@ describe("AjoClient", () => {
           networkPassphrase: "Public Global Stellar Network ; September 2015",
         }),
     ).not.toThrow();
+  });
+});
+describe("decodeReturnValue", () => {
+  it("decodes a u64 return value (e.g. create_circle's new id) to a bigint", () => {
+    expect(decodeReturnValue<bigint>(nativeToScVal(42n, { type: "u64" }))).toBe(42n);
+  });
+
+  it("returns undefined when there is no return value", () => {
+    expect(decodeReturnValue(undefined)).toBeUndefined();
+  });
+
+  it("returns undefined for a void return (e.g. join / contribute)", () => {
+    expect(decodeReturnValue(xdr.ScVal.scvVoid())).toBeUndefined();
   });
 });
