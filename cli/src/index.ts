@@ -145,8 +145,12 @@ circles
       Number(opts.members),
       BigInt(opts.cycleSecs),
     );
-    await ajo.submitSignedTx(signXdr(unsigned, secretKey));
-    console.log("Circle created. Run `ajo circles list` to find its id.");
+    const circleId = await ajo.submitSignedTx<bigint>(signXdr(unsigned, secretKey));
+    console.log(
+      circleId === undefined
+        ? "Circle created. Run `ajo circles list` to find its id."
+        : `Circle created with id ${circleId}.`,
+    );
   });
 
 function memberAction(name: "join" | "leave" | "contribute", build: (ajo: AjoClient, id: bigint, pk: string) => Promise<string>) {
