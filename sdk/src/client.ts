@@ -13,6 +13,7 @@ import {
   rpc,
   xdr,
 } from "@stellar/stellar-sdk";
+import { ContractErrorCode, describeContractError, parseContractErrorCode } from "./errors";
 
 export enum CircleStatus {
   Forming = 0,
@@ -66,9 +67,18 @@ function parseCircle(raw: RawCircle): Circle {
 }
 
 export class AjoContractError extends Error {
-  constructor(message: string) {
+  /** The contract's `ContractError` code, when the failure was one. */
+  readonly code: ContractErrorCode | null;
+
+  constructor(message: string, code: ContractErrorCode | null = null) {
     super(message);
     this.name = "AjoContractError";
+    this.code = code;
+  }
+
+  /** Build from a raw simulation error, resolving known contract error codes. */
+  static fromSimulationError(raw: string): AjoContractError {
+    return new AjoContractError(describeContractError(raw), parseContractErrorCode(raw));
   }
 }
 
@@ -310,7 +320,7 @@ export class AjoClient {
 
     const sim = await this.server.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
-      throw new AjoContractError(sim.error);
+      throw AjoContractError.fromSimulationError(sim.error);
     }
     return scValToNative(sim.result!.retval) as T;
   }
@@ -324,7 +334,7 @@ export class AjoClient {
 
     const sim = await this.server.simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
-      throw new AjoContractError(sim.error);
+      throw AjoContractError.fromSimulationError(sim.error);
     }
     return rpc.assembleTransaction(tx, sim).build().toXDR();
   }

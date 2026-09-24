@@ -13,6 +13,7 @@ import {
   rpc,
   xdr,
 } from "@stellar/stellar-sdk";
+import { ContractErrorCode, describeContractError, parseContractErrorCode } from "./contract-errors";
 
 const RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";
 const NETWORK_PASSPHRASE =
@@ -76,7 +77,20 @@ function parseCircle(raw: RawCircle): Circle {
   };
 }
 
-export class ContractCallError extends Error {}
+export class ContractCallError extends Error {
+  /** The contract's `ContractError` code, when the failure was one. */
+  readonly code: ContractErrorCode | null;
+
+  constructor(message: string, code: ContractErrorCode | null = null) {
+    super(message);
+    this.code = code;
+  }
+
+  /** Build from a raw simulation error, resolving known contract error codes. */
+  static fromSimulationError(raw: string): ContractCallError {
+    return new ContractCallError(describeContractError(raw), parseContractErrorCode(raw));
+  }
+}
 
 const SEND_TX_MAX_ATTEMPTS = 5;
 const SEND_TX_RETRY_BASE_DELAY_MS = 500;
@@ -116,7 +130,7 @@ async function readCall<T>(method: string, args: xdr.ScVal[]): Promise<T> {
 
   const sim = await server.simulateTransaction(tx);
   if (rpc.Api.isSimulationError(sim)) {
-    throw new ContractCallError(sim.error);
+    throw ContractCallError.fromSimulationError(sim.error);
   }
   return scValToNative(sim.result!.retval) as T;
 }
@@ -155,7 +169,7 @@ async function buildTx(sourcePublicKey: string, method: string, args: xdr.ScVal[
 
   const sim = await server.simulateTransaction(tx);
   if (rpc.Api.isSimulationError(sim)) {
-    throw new ContractCallError(sim.error);
+    throw ContractCallError.fromSimulationError(sim.error);
   }
   return rpc.assembleTransaction(tx, sim).build().toXDR();
 }
