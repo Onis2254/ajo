@@ -178,8 +178,12 @@ export function buildCancelCircleTx(circleId: bigint, caller: string) {
   ]);
 }
 
-/** Submit a wallet-signed transaction XDR and poll until it lands. */
-export async function submitSignedTx(signedXdr: string): Promise<void> {
+/**
+ * Submit a wallet-signed transaction XDR and poll until it lands. Resolves
+ * with the call's decoded return value (mirrors the SDK), or `undefined`
+ * for void calls.
+ */
+export async function submitSignedTx<T = unknown>(signedXdr: string): Promise<T | undefined> {
   const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
   const sent = await server.sendTransaction(tx);
   if (sent.status === "ERROR") {
@@ -198,6 +202,9 @@ export async function submitSignedTx(signedXdr: string): Promise<void> {
   if (result.status !== "SUCCESS") {
     throw new ContractCallError(`Transaction failed: ${JSON.stringify(result)}`);
   }
+  const rv = result.returnValue;
+  if (rv === undefined || rv.switch() === xdr.ScValType.scvVoid()) return undefined;
+  return scValToNative(rv) as T;
 }
 
 /**

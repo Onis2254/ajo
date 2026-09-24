@@ -1,3 +1,3 @@
 // Src module.
-export { AjoClient, AjoContractError, CircleStatus, minLedgerFromRangeError } from "./client";
+export { AjoClient, AjoContractError, CircleStatus, decodeReturnValue, minLedgerFromRangeError } from "./client";
 export type { Circle, AjoClientConfig } from "./client";

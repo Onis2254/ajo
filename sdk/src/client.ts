@@ -81,6 +81,15 @@ const DEFAULT_RPC_URL = "https://soroban-testnet.stellar.org";
 const DEFAULT_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 
 /**
+ * Decode a transaction's Soroban return value to a native JS value, or
+ * `undefined` when the call returned nothing.
+ */
+export function decodeReturnValue<T = unknown>(returnValue: xdr.ScVal | undefined): T | undefined {
+  if (returnValue === undefined || returnValue.switch() === xdr.ScValType.scvVoid()) return undefined;
+  return scValToNative(returnValue) as T;
+}
+
+/**
  * A thin, non-custodial client for the Ajo circle contract.
  *
  * This client never holds or requests a private key. Every state-changing
@@ -233,8 +242,14 @@ export class AjoClient {
     return this.buildTx(caller, "disburse", [nativeToScVal(circleId, { type: "u64" })]);
   }
 
-  /** Submit a caller-signed transaction XDR and poll until it lands. */
-  async submitSignedTx(signedXdr: string): Promise<void> {
+  /**
+   * Submit a caller-signed transaction XDR and poll until it lands.
+   *
+   * Resolves with the contract call's decoded return value (e.g. the new
+   * circle id from `create_circle`), or `undefined` for calls that return
+   * nothing, so callers don't need a follow-up read to learn the result.
+   */
+  async submitSignedTx<T = unknown>(signedXdr: string): Promise<T | undefined> {
     const tx = TransactionBuilder.fromXDR(signedXdr, this.networkPassphrase);
     const sent = await this.server.sendTransaction(tx);
     if (sent.status === "ERROR") {
@@ -253,6 +268,7 @@ export class AjoClient {
     if (result.status !== "SUCCESS") {
       throw new AjoContractError(`Transaction failed: ${JSON.stringify(result)}`);
     }
+    return decodeReturnValue<T>(result.returnValue);
   }
 
   private async readCall<T>(method: string, args: xdr.ScVal[]): Promise<T> {
