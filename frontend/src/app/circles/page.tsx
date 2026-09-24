@@ -264,7 +264,9 @@ export default function CirclesPage() {
             <h2 className="eyebrow">Recent circles</h2>
             <div className="mt-4">
               {loadError ? (
-                <Card className="p-6 text-sm text-accent-rose">{loadError}</Card>
+                <Card className="p-6 text-sm text-accent-rose" role="alert">
+                  {loadError}
+                </Card>
               ) : circles === null ? (
                 <div
                   className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
