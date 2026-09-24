@@ -51,14 +51,27 @@ export function Navbar() {
     const container = mobileMenuRef.current;
     if (!container) return;
 
-    const firstLink = container.querySelector<HTMLElement>('a[href], button:not([disabled])');
-    firstLink?.focus();
+    const focusables = Array.from(
+      container.querySelectorAll<HTMLElement>('a[href], button:not([disabled])'),
+    );
+    focusables[0]?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
         setMenuOpen(false);
         mobileMenuButtonRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab" || focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
