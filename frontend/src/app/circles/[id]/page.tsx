@@ -196,7 +196,9 @@ export default function CircleDetailPage() {
       <main className="flex-1">
         <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
           {error ? (
-            <Card className="p-6 text-sm text-accent-rose">{error}</Card>
+            <Card className="p-6 text-sm text-accent-rose" role="alert">
+              {error}
+            </Card>
           ) : !circle || !members ? (
             <Spinner label="Loading circle…" />
           ) : (
